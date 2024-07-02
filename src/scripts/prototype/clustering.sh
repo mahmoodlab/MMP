@@ -14,6 +14,7 @@ mode='faiss'  # 'faiss' or 'kmeans'
 n_proto=16  # Number of prototypes
 n_init=3  # Number of KMeans initializations to perform
 
+
 # Validity check for feat paths
 all_feat_dirs=""
 for dataroot_path in "${dataroots[@]}"; do

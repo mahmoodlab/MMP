@@ -6,7 +6,6 @@ config=$2
 ### Dataset Information
 declare -a dataroots=(
 	'path/to/tcga_brca'/
-
 )
 
 task='BRCA_survival'

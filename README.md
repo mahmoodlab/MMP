@@ -25,9 +25,9 @@ We introduce **M**ulti**M**odal **P**rototyping framework (**MMP**), where the r
 - 07/02/2024: The first version of MMP codebase is now live!
 
 ## Installation
-Please run the following command to create MMP conda environment.
+Once you clone the repo, please run the following command to create MMP conda environment.
 ```shell
-conda env create -f environment.yml
+conda env create -f env.yaml
 ```
 
 ## MMP Walkthrough

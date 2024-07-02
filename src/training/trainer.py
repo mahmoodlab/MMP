@@ -108,15 +108,12 @@ def train(datasets, args):
         train_results = train_loop_survival(model, datasets['train'], optimizer, lr_scheduler, loss_fn,
                                             print_every=args.print_every, accum_steps=args.accum_steps)
 
-        writer = log_dict_tensorboard(writer, train_results, 'train/', epoch)
 
         ### Validation Loop (Optional)
         if 'val' in datasets.keys():
             print('#' * 11, f'VAL Epoch: {epoch}', '#' * 11)
             val_results, _ = validate_survival(model, datasets['val'], loss_fn,
                                                    print_every=args.print_every, verbose=True)
-
-            writer = log_dict_tensorboard(writer, val_results, 'val/', epoch)
 
             ### Check Early Stopping (Optional)
             if early_stopper is not None:
