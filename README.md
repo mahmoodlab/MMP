@@ -31,22 +31,82 @@ conda env create -f env.yaml
 ```
 
 ## MMP Walkthrough
-MMP can largely be broken down into four steps:
+MMP can largely be broken down into the following steps:
 
+**Step 0**: Dataset organization for histology patch features\
 **Step 1**: Construct histology prototypes (across the specific cancer cohort) and aggregate tissue patch tokens to the each prototype for each patient.\
 **Step 2**: Construct pathway prototypes and aggregate transcriptomic expression tokens to each prototype for each patient.\
 **Step 3**: Fuse aggegated histology and pathway embeddings and perform downstream task.\
 **Step 4**: Visualization.
 
-### Step 1. Morphology prototype construction
-A concrete script example of using TCGA-BRCA patch features can be found below.
+### Step 0. Dataset organization
+**Data csv**: The data csv files (with appropriate splits, e.g., train, test) are placed within `src/splits` with appropriate folder structure. For example, for classification task on ebrains, we would have
+```bash
+splits/
+	├── ebrains
+    		├── train.csv
+    		├── val.csv
+    		└── test.csv
+```
+
+Alternatively, for 5-fold cross-validation survival task on TCGA BRCA, we would have
+```bash
+splits/
+	├── TCGA_BRCA_survival_k=0
+    		├── train.csv
+    		├── val.csv
+    		└── test.csv
+	├── ...
+
+        ├── TCGA_BRCA_survival_k=4
+    		├── train.csv
+    		├── val.csv
+    		└── test.csv
+```
+
+**Patch features**: For the following steps, we assume that features for each patch have already been extracted and that each WSI is represented as a set of patch features. For examples of patch feature extraction, please refer to [CLAM](https://github.com/mahmoodlab/CLAM). 
+
+The code assumes that the features are either in `.h5` or `.pt` formats - the feature directory path `FEAT_DIR` has to end with the directory `feats_h5/` if the features are in `.h5` format, and `feats_pt/` for `.pt` format.
+
+While there is no de facto standard, one good practice of organizing features are as follows (used as examples in [clustering](src/scripts/prototype/clustering.sh) and [mmp](src/scripts/survival/mmp.sh))
+```
+/path_to_data_folder/tcga_brca/extracted_mag20x_patch256_fp/extracted-vit_large_patch16_224.dinov2.uni_mass100k/feats_h5
+```
+which specifies *magnification*, *patch size*, and *feature extractor* used to create the patch features. 
+
+### Step 1. Histology prototype construction
+For prototype construction, we use K-means clustering across all training WSIs. We recommend using GPU-based FAISS when using large number of patch features for clustering. For example, we can use the following command to find 16 prototypes (of 1,024 dimension each) using FAISS from WSIs corresponding to `SPLIT_DIR/train.csv`.
+```shell
+CUDA_VISIBLE_DEVICES=0 python -m training.main_prototype \
+--mode faiss \
+--data_source FEAT_DIR_1,FEAT_DIR_2 \
+--split_dir SPLIT_DIR \
+--split_names train \
+--in_dim 1024 \
+--n_proto_patches 1000000 \
+--n_proto 16 \
+--n_init 5 \
+--seed 1 \
+--num_workers 10 \
+```
+The list of parameters is as follows:
+- `mode`: 'faiss' uses GPU-enabled K-means clustering to find the prototypes. 'kmeans' uses sklearn K-means clustering on CPU ('faiss' or 'kmeans').
+- `data_source`: comma-separated list of feature directories ending with either `feats_h5` or `feats_p5`. Example of a feature dictory is provided in **Step 0**.
+- `split_names`: Which data split to perform clustering/prototyping on. By default `train` is the best (Since train split has the most data.) 
+- `in_dim`: Dimension of the patch features, dependent on the feature encoder.
+- `n_proto`: Number of prototypes.
+- `n_proto_patches`: Number of patch features to use per prototype. In total, `n_proto * n_proto_patches` features are used for finding prototypes.
+- `n_init`: Number of K-means initializations to try.
+
+The prototypes will be saved in the `SPLIT_DIR/prototypes` folder.
+
+
+A concrete script example of using TCGA-BRCA patch features can be found below. 
 ```shell
 cd src
 ./scripts/prototype/brca.sh 0
 ```
-This will initiate the script `scripts/prototype/clustering.sh` for K-means clustering. Detailed explanations on hyperparameters can be found in [clustering.sh](src/scripts/prototype/clustering.sh). 
-
-For more instructions on **Step 1**, please refer to the instructions (**Step 0** and **Step 1**) in [PANTHER](https://github.com/mahmoodlab/PANTHER).
+This will initiate the script `scripts/prototype/clustering.sh` for K-means clustering. Detailed explanations for clustering hyperparameters can be found in **clustering.sh**. 
 
 ### Step 2. Pathway prototype construction
 First, we need to download the pancancer-normalized TCGA transcriptomics expression data from Xena database.\
