@@ -4,7 +4,7 @@
   <b>Multimodal Prototyping for cancer survival prediction</b>, ICML 2024.
 	<br><em>Andrew H. Song, Richard J. Chen, Guillaume Jaume, Anurag Vaidya, Alexander S. Baras, Faisal Mahmood</em></br>
 
-<img src="docs/mmp_logo.png" width="250px" align="right" />
+<img src="docs/mmp_logo.png" width="230px" align="right" />
 
 [Paper](https://openreview.net/pdf?id=3MfvxH3Gia) | [Cite](#cite)
 
@@ -39,7 +39,14 @@ MMP can largely be broken down into four steps:
 **Step 4**: Visualization.
 
 ### Step 1. Morphology prototype construction
-For instructions on **Step 1**, please refer to the instructions in [PANTHER](https://github.com/mahmoodlab/PANTHER).
+A concrete script example of using TCGA-BRCA patch features can be found below.
+```shell
+cd src
+./scripts/prototype/brca.sh 0
+```
+This will initiate the script `scripts/prototype/clustering.sh` for K-means clustering. Detailed explanations on hyperparameters can be found in [clustering.sh](src/scripts/prototype/clustering.sh). 
+
+For more instructions on **Step 1**, please refer to the instructions (**Step 0** and **Step 1**) in [PANTHER](https://github.com/mahmoodlab/PANTHER).
 
 ### Step 2. Pathway prototype construction
 First, we need to download the pancancer-normalized TCGA transcriptomics expression data from Xena database.\
