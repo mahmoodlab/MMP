@@ -22,7 +22,8 @@ We introduce **M**ulti**M**odal **P**rototyping framework (**MMP**), where the r
 <img src="docs/fig1.jpg" width="1400px" align="center" />
 
 ## Updates
-- 07/02/2024: The first version of MMP codebase is now live!
+- **02/20/2025**: You can also use [TRIDENT](https://github.com/mahmoodlab/TRIDENT) to extract patch features for MMP. 
+- **07/02/2024**: The first version of MMP codebase is now live!
 
 ## Installation
 Once you clone the repo, please run the following command to create MMP conda environment.
