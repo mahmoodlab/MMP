@@ -85,9 +85,9 @@ def get_default_cmap(n=32, return_hex=False):
 
 def get_panther_encoder(in_dim, p, proto_path, config_dir='../'):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_type', type=str, default='PANTHER')
+    parser.add_argument('--model_histo_type', type=str, default='PANTHER')
     parser.add_argument('--proto_model_type', type=str, default='PANTHER')
-    parser.add_argument('--model_config', type=str, default='PANTHER_default')
+    parser.add_argument('--model_histo_config', type=str, default='PANTHER_default')
     parser.add_argument('--in_dim', type=int, default=in_dim)
     parser.add_argument('--embed_dim', type=int, default=64)
     parser.add_argument('--n_proto', type=int, default=16)
