@@ -42,7 +42,9 @@ def cluster(data_loader, n_proto, n_iter, n_init=5, feature_dim=1024, n_proto_pa
         data = batch['img'] # (n_batch, n_instances, instance_dim)
 
         with torch.no_grad():
-            out = data.reshape(-1, data.shape[-1])[:n_patches_per_batch]  # Remove batch dim
+            data_reshaped = data.reshape(-1, data.shape[-1])
+            np.random.shuffle(data_reshaped)
+            out = data_reshaped[:n_patches_per_batch]  # Remove batch dim
 
         size = out.size(0)
         if n_patches + size > n_total:
