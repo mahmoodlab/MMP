@@ -25,6 +25,10 @@ SPLIT_DIR="splits/TCGA_BLCA_survival_k=0"  # Update this to your actual split di
 OMIC_SOURCE="data_csvs/TCGA_BLCA/rnaseq/tcga_blca_rna_clean.csv"  # Update if you have BLCA RNA data
 OMIC_NAMES="data_csvs/TCGA_BLCA/signatures/hallmark_gene_sets.csv"  # Or your gene signature file
 
+# IMPORTANT: Set this to match your feature dimension
+# Common values: 768 (ViT-based), 1024 (ResNet-based), 2048 (ResNet50)
+IN_DIM=768  # Your features are 768-dimensional
+
 # Navigate to src directory
 cd "$(dirname "$0")/../../src" || exit
 
@@ -130,6 +134,7 @@ python -m training.main_survival \
     --model_histo_type "$MODEL_HISTO_TYPE" \
     --model_histo_config "$MODEL_HISTO_CONFIG" \
     --model_mm_type "$MODEL_MM_TYPE" \
+    --in_dim "$IN_DIM" \
     --n_proto "$N_PROTO" \
     --out_type "$OUT_TYPE" \
     --em_iter "$EM_ITER" \

@@ -4,6 +4,7 @@
 
 1. ✓ **配置文件路径错误**: `model_histo_config` 默认值已从 `ABMIL_default` 改为 `PANTHER_default`
 2. ✓ **out_type 参数错误**: 默认值已从 `param_cat` 改为 `allcat`
+3. ✓ **特征维度自动检测**: 添加了维度检测工具和明确的配置说明
 
 ## 📁 您的数据配置
 
@@ -15,11 +16,27 @@
 
 ## 🚀 快速开始
 
+### 步骤 0: 检测特征维度（重要！）
+
+```bash
+# 首先检测您的特征维度
+python check_feature_dim.py /data/TCGA/BLCA/features/pt_files
+
+# 输出示例:
+# ✅ 所有特征文件的维度一致: 768
+# 📋 您需要在训练时设置: --in_dim 768
+```
+
+如果您的特征是 **768维**（常见于ViT模型），训练脚本已经自动配置好了。
+
 ### 方法 1: 使用专用脚本（推荐）
 
 ```bash
 cd scripts/survival
 chmod +x train_blca_causal_separation.sh
+
+# 如果需要，编辑脚本修改 IN_DIM=768 为您的实际维度
+
 ./train_blca_causal_separation.sh 0 0
 ```
 
@@ -31,6 +48,7 @@ python -m training.main_survival \
     --split_dir splits/TCGA_BLCA_survival_k=0 \
     --split_names 0 \
     --data_source /data/TCGA/BLCA/features/pt_files \
+    --in_dim 768 \
     --model_histo_type PANTHER \
     --model_histo_config PANTHER_default \
     --model_mm_type causal_separation \
@@ -47,6 +65,8 @@ python -m training.main_survival \
     --lr 2e-4 \
     --results_dir results/BLCA_causal_separation
 ```
+
+**⚠️ 重要**: 将 `--in_dim 768` 改为您实际的特征维度！
 
 ## ⚙️ 必需的配置步骤
 
@@ -105,6 +125,7 @@ python -m training.main_prototype \
 
 | 参数 | 正确值 | 说明 |
 |------|--------|------|
+| `--in_dim` | `768` | ⚠️ **最重要！** 必须匹配您的特征维度 |
 | `--model_histo_config` | `PANTHER_default` | ⚠️ 必须匹配模型类型 |
 | `--out_type` | `allcat` | ⚠️ PANTHER只支持: allcat, weight_param_cat, weight_avg_all |
 | `--data_source` | `/data/TCGA/BLCA/features/pt_files` | 您的特征路径 |
@@ -119,7 +140,34 @@ python -m training.main_prototype \
 
 ## 🐛 故障排除
 
-### 错误 1: Config path doesn't exist
+### 错误 1: 特征维度不匹配（最常见！）
+
+```bash
+RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [1, 1024] but got: [1, 768]
+```
+
+**原因**: 您的特征是768维，但模型期望1024维（或其他维度）
+
+**解决方案**:
+```bash
+# 1. 首先检测您的特征维度
+python check_feature_dim.py /data/TCGA/BLCA/features/pt_files
+
+# 2. 在训练命令中明确指定维度
+--in_dim 768  # 使用您检测到的实际维度
+
+# 3. 如果您有预先计算的原型，需要重新生成
+cd src
+python -m training.main_prototype \
+    --mode faiss \
+    --data_source /data/TCGA/BLCA/features/pt_files \
+    --split_dir splits/TCGA_BLCA_survival_k=0 \
+    --n_proto 16 \
+    --in_dim 768 \
+    --n_proto_patches 100000
+```
+
+### 错误 2: Config path doesn't exist
 
 ```bash
 AssertionError: Config path ./configs/ABMIL_default/config.json doesn't exist!
