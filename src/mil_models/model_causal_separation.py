@@ -470,7 +470,7 @@ class CausalSeparationModel(nn.Module):
             x_omics: List of (B, n_genes) tensors
             label: Survival labels
             censorship: Censorship indicators
-            loss_fn: Loss function name ('cox', 'nll', etc.)
+            loss_fn: Loss function object (NLLSurvLoss, CoxLoss, or SurvRankingLoss)
             return_selection: Whether to return selection information
 
         Returns:

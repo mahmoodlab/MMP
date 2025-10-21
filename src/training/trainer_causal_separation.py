@@ -247,7 +247,7 @@ def train_loop_causal_separation(model, loader, optimizer, lr_scheduler,
         out, log_dict = model(data, omics,
                              label=label,
                              censorship=censorship,
-                             loss_fn=base_loss_fn.__class__.__name__.lower(),
+                             loss_fn=base_loss_fn,
                              return_selection=True)
 
         # Compute combined loss
@@ -377,7 +377,7 @@ def validate_causal_separation(model, loader, base_loss_fn, causal_loss_fn,
             out, log_dict = model(data, omics,
                                  label=label,
                                  censorship=censorship,
-                                 loss_fn=base_loss_fn.__class__.__name__.lower(),
+                                 loss_fn=base_loss_fn,
                                  return_selection=True)
 
             # Compute loss
