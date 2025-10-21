@@ -128,8 +128,8 @@ class SharedTransformerBranch(nn.Module):
     """
     A single branch of the three-branch architecture.
 
-    This is a simplified version of the coattn model that can handle
-    variable numbers of prototypes (for causal/confounding subsets).
+    This is a simplified version that uses standard self-attention instead of
+    the custom MMAttentionLayer, making it compatible with dynamic prototype numbers.
     """
 
     def __init__(self,
@@ -154,23 +154,27 @@ class SharedTransformerBranch(nn.Module):
             )
             self.out_dim = int(out_dim * mult)
         else:
-            # With cross-attention
+            # Use standard Transformer layer with self-attention
+            # This works with dynamic number of tokens
             out_dim = path_proj_dim // 2
 
-            cross_attender = MMAttentionLayer(
-                dim=path_proj_dim,
-                dim_head=out_dim,
-                heads=1,
-                residual=False,
+            # Standard PyTorch MultiheadAttention
+            self.self_attn = nn.MultiheadAttention(
+                embed_dim=path_proj_dim,
+                num_heads=1,
                 dropout=dropout,
-                num_pathways=None,  # Will be dynamic
-                attn_mode='full'
+                batch_first=True
             )
 
-            feed_forward = FeedForward(out_dim, mult, dropout=dropout)
-            layer_norm = nn.LayerNorm(int(out_dim * mult))
+            self.norm1 = nn.LayerNorm(path_proj_dim)
+            self.norm2 = nn.LayerNorm(int(out_dim * mult))
 
-            self.coattn = nn.Sequential(cross_attender, feed_forward, layer_norm)
+            # Project to output dimension
+            self.proj = nn.Linear(path_proj_dim, out_dim)
+
+            # Feedforward
+            self.feed_forward = FeedForward(out_dim, mult, dropout=dropout)
+
             self.out_dim = int(out_dim * mult)
 
     def forward(self, h_omic, h_path):
@@ -185,12 +189,23 @@ class SharedTransformerBranch(nn.Module):
         # Concatenate gene and histo prototypes
         tokens = torch.cat([h_omic, h_path], dim=1)  # (B, n_gene + n_histo, d)
 
-        # Pass through co-attention
-        mm_embed = self.coattn(tokens)  # (B, n_gene + n_histo, out_dim)
-
-        # Aggregate
         num_pathways = h_omic.shape[1]
 
+        if self.num_coattn_layers > 0:
+            # Apply self-attention
+            # PyTorch MultiheadAttention expects (B, N, D) with batch_first=True
+            attn_out, _ = self.self_attn(tokens, tokens, tokens)
+            tokens = self.norm1(tokens + attn_out)  # Residual connection
+
+            # Project and apply feedforward
+            tokens = self.proj(tokens)  # (B, n_gene + n_histo, out_dim)
+            ff_out = self.feed_forward(tokens)
+            mm_embed = self.norm2(ff_out)
+        else:
+            # Just feedforward
+            mm_embed = self.coattn(tokens)
+
+        # Aggregate
         # Gene aggregation
         gene_embed = mm_embed[:, :num_pathways, :]
         gene_embed = torch.mean(gene_embed, dim=1)  # (B, out_dim)
