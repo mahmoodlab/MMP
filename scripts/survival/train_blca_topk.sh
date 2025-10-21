@@ -1,13 +1,11 @@
 #!/bin/bash
 
-# Causal Separation Model Training Script for TCGA BLCA
+# Causal Separation Model Training Script for TCGA BLCA (TopK Selector)
 #
-# This script is configured for your TCGA BLCA dataset
-# Features path: /data/TCGA/BLCA/features/pt_files
+# This version uses TopK selection which is more stable than Gumbel-Softmax
+# and may prevent the histology selection collapse issue.
 #
-# Usage: ./train_blca_causal_separation.sh [gpu_id] [split_name]
-#
-# Example: ./train_blca_causal_separation.sh 0 0
+# Usage: ./train_blca_topk.sh [gpu_id] [split_name]
 
 # ============================================================================
 # Configuration
@@ -21,13 +19,12 @@ export CUDA_VISIBLE_DEVICES=$GPU_ID
 
 # Data paths - MODIFY THESE TO MATCH YOUR SETUP
 DATA_ROOT="/data/TCGA/BLCA/features/pt_files"
-SPLIT_DIR="splits/TCGA_BLCA_survival_k=0"  # Update this to your actual split directory
-OMIC_SOURCE="data_csvs/TCGA_BLCA/rnaseq/tcga_blca_rna_clean.csv"  # Update if you have BLCA RNA data
-OMIC_NAMES="data_csvs/TCGA_BLCA/signatures/hallmark_gene_sets.csv"  # Or your gene signature file
+SPLIT_DIR="splits/TCGA_BLCA_survival_k=0"
+OMIC_SOURCE="data_csvs/TCGA_BLCA/rnaseq/tcga_blca_rna_clean.csv"
+OMIC_NAMES="data_csvs/TCGA_BLCA/signatures/hallmark_gene_sets.csv"
 
-# IMPORTANT: Set this to match your feature dimension
-# Common values: 768 (ViT-based), 1024 (ResNet-based), 2048 (ResNet50)
-IN_DIM=768  # Your features are 768-dimensional
+# Feature dimension
+IN_DIM=768
 
 # Navigate to src directory
 cd "$(dirname "$0")/../../src" || exit
@@ -42,7 +39,7 @@ MODEL_MM_TYPE="causal_separation"
 
 # Prototype configuration
 N_PROTO=16
-OUT_TYPE="allcat"  # IMPORTANT: Must be 'allcat' for PANTHER, not 'param_cat'
+OUT_TYPE="allcat"
 EM_ITER=1
 TAU=1.0
 OT_EPS=0.1
@@ -51,48 +48,48 @@ OT_EPS=0.1
 # Training Configuration
 # ============================================================================
 
-MAX_EPOCHS=30                    # Increased for better convergence with regularization
-LR=1e-4                         # Slightly lower (was 2e-4) for more stable training
-WEIGHT_DECAY=1e-4               # 10x higher (was 1e-5) to prevent overfitting
+MAX_EPOCHS=30
+LR=1e-4
+WEIGHT_DECAY=1e-4               # Higher weight decay to prevent overfitting
 BATCH_SIZE=1
 ACCUM_STEPS=32
-PRINT_EVERY=100                 # Less frequent printing (was 10)
+PRINT_EVERY=100
 
 # Loss configuration
-LOSS_FN="cox"  # Options: 'cox', 'nll', 'rank'
+LOSS_FN="cox"
 
 # ============================================================================
-# Causal Separation Parameters
+# Causal Separation Parameters - TOPK METHOD
 # ============================================================================
 
-# Selection method: 'gumbel', 'topk', or 'adaptive'
-SELECTION_METHOD="gumbel"
-GUMBEL_TAU=0.5          # Lower tau = harder/sharper selection (was 1.0)
-GUMBEL_HARD="true"      # Use lowercase string for bash
-TOP_K_RATIO=0.3         # Select top 30% if using topk method (was 0.5)
+# Use TopK selection (deterministic, more stable)
+SELECTION_METHOD="topk"
+GUMBEL_TAU=0.5
+GUMBEL_HARD="true"
+TOP_K_RATIO=0.3                 # Select top 30% based on learned scores
 
-# Loss weights - INCREASED FOR BETTER REGULARIZATION
+# Loss weights - STRONG REGULARIZATION
 LAMBDA_CAUSAL_CONSISTENCY=1.0
-LAMBDA_CONFOUND_RANDOM=1.0      # Increased from 0.5 to push confound toward random
-LAMBDA_SPARSITY=2.0             # MUCH higher from 0.01 - encourage sparse selection
-LAMBDA_BALANCE=0.5              # Increased from 0.1 to balance histo/gene selection
+LAMBDA_CONFOUND_RANDOM=1.0      # Push confound toward random
+LAMBDA_SPARSITY=1.0             # Moderate sparsity (TopK already enforces sparsity)
+LAMBDA_BALANCE=1.0              # Strong balance constraint to prevent histo collapse
 
 # Loss modes
-CAUSAL_CONSISTENCY_MODE="kl"      # Options: 'kl', 'mse', 'cosine'
-CONFOUND_RANDOM_MODE="entropy"    # Options: 'entropy', 'uniform', 'variance'
-TARGET_SELECTION_RATIO=0.3        # Expect 30% selection (was 0.5 = too high)
+CAUSAL_CONSISTENCY_MODE="kl"
+CONFOUND_RANDOM_MODE="entropy"
+TARGET_SELECTION_RATIO=0.3      # Expect 30% selection
 
 # ============================================================================
 # Other Parameters
 # ============================================================================
 
 # Early stopping
-EARLY_STOPPING=True
+EARLY_STOPPING="true"
 ES_PATIENCE=10
 ES_MIN_EPOCHS=5
 
 # Omics configuration
-OMICS_MODALITY="pathway"  # Options: 'pathway', 'functional', 'none'
+OMICS_MODALITY="pathway"
 
 # Multimodal
 NUM_COATTN_LAYERS=1
@@ -100,22 +97,18 @@ HISTO_AGG="mean"
 APPEND_EMBED="none"
 
 # Results directory
-RESULTS_DIR="results/BLCA_causal_separation_${SELECTION_METHOD}_k${SPLIT_NAME}"
+RESULTS_DIR="results/BLCA_causal_topk_k${SPLIT_NAME}"
 
 # ============================================================================
 # Print Configuration
 # ============================================================================
 
 echo "========================================="
-echo "TCGA BLCA Causal Separation Training"
+echo "TCGA BLCA Causal Separation Training (TopK)"
 echo "========================================="
 echo "GPU ID: $GPU_ID"
 echo "Split Name: $SPLIT_NAME"
-echo "Data Root: $DATA_ROOT"
-echo "Split Dir: $SPLIT_DIR"
-echo "Model: $MODEL_MM_TYPE with $MODEL_HISTO_TYPE"
-echo "Selection Method: $SELECTION_METHOD"
-echo "Out Type: $OUT_TYPE"
+echo "Selection Method: $SELECTION_METHOD (top ${TOP_K_RATIO})"
 echo "Results Dir: $RESULTS_DIR"
 echo "========================================="
 echo ""
