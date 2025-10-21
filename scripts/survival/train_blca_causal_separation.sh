@@ -163,6 +163,7 @@ python -m training.main_survival \
     --early_stopping "$EARLY_STOPPING" \
     --es_patience "$ES_PATIENCE" \
     --es_min_epochs "$ES_MIN_EPOCHS" \
+    --overwrite \
     --results_dir "$RESULTS_DIR"
 
 echo ""

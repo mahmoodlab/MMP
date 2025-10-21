@@ -121,6 +121,30 @@ Batch 10/289 | Loss: 1.2345 | Causal: 0.5678 | Confound: 0.3456 | Full: 0.4567
 
 ## ❌ 如果仍然出错
 
+### 错误：维度不匹配（最常见！）
+
+```bash
+RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [1, 132] but got: [1, 66]
+```
+
+**原因**：缓存的嵌入文件与当前配置不匹配
+
+**快速修复**：
+```bash
+# 方法1: 使用清理脚本
+cd scripts
+./clean_embeddings.sh splits/TCGA_BLCA_survival_k=0
+
+# 方法2: 手动删除
+rm -rf splits/TCGA_BLCA_survival_k=0/embeddings/*.pkl
+
+# 然后重新训练
+cd survival
+./train_blca_causal_separation.sh 0 0
+```
+
+详细说明请看：`FIX_DIMENSION_MISMATCH.md`
+
 ### 错误：找不到split文件
 
 ```bash
