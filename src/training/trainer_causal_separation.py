@@ -286,9 +286,9 @@ def train_loop_causal_separation(model, loader, optimizer, lr_scheduler,
                   f'Full: {meters["survival_loss_full"].avg:.4f}')
 
     # Compute C-index
-    all_risk_scores = np.concatenate(all_risk_scores)
-    all_censorships = np.concatenate(all_censorships)
-    all_event_times = np.concatenate(all_event_times)
+    all_risk_scores = np.concatenate(all_risk_scores).squeeze()
+    all_censorships = np.concatenate(all_censorships).squeeze()
+    all_event_times = np.concatenate(all_event_times).squeeze()
 
     c_index = concordance_index_censored(
         (1 - all_censorships).astype(bool),
@@ -419,9 +419,9 @@ def validate_causal_separation(model, loader, base_loss_fn, causal_loss_fn,
     # Compute C-indices for all branches
     c_indices = {}
     for branch in ['causal', 'confound', 'full']:
-        risk_scores = np.concatenate(all_risk_scores[branch])
-        censorships = np.concatenate(all_censorships)
-        event_times = np.concatenate(all_event_times)
+        risk_scores = np.concatenate(all_risk_scores[branch]).squeeze()
+        censorships = np.concatenate(all_censorships).squeeze()
+        event_times = np.concatenate(all_event_times).squeeze()
 
         c_index = concordance_index_censored(
             (1 - censorships).astype(bool),
