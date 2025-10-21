@@ -16,6 +16,7 @@ from utils.utils import (seed_torch, array2list, merge_dict, read_splits,
                          parse_model_name, get_current_time, extract_patching_info)
 
 from .trainer import train
+from .trainer_causal_separation import train_causal_separation
 from wsi_datasets import WSIOmicsSurvivalDataset
 # pytorch imports
 import torch
@@ -111,7 +112,11 @@ def main(args):
                                     train_kwargs=train_kwargs,
                                     val_kwargs=val_kwargs)
 
-    fold_results, fold_dumps = train(dataset_splits, args)
+    # Use causal separation trainer if model type is causal_separation or use_causal_separation flag is set
+    if args.model_mm_type == 'causal_separation' or args.use_causal_separation:
+        fold_results, fold_dumps = train_causal_separation(dataset_splits, args)
+    else:
+        fold_results, fold_dumps = train(dataset_splits, args)
 
     # Save results
     for split, split_results in fold_results.items():
@@ -185,7 +190,7 @@ parser.add_argument('--out_type', type=str, default='param_cat')
 # Multimodal args ###
 parser.add_argument('--num_coattn_layers', default=1, type=int)
 parser.add_argument('--model_mm_type', default='coattn',
-                    choices=['coattn', 'coattn_mot', 'survpath', 'histo', 'gene'],
+                    choices=['coattn', 'coattn_mot', 'survpath', 'histo', 'gene', 'causal_separation'],
                     help='Multimodal model type')
 parser.add_argument('--net_indiv', action='store_true', default=False)
 parser.add_argument('--append_embed', type=str, default='none',
@@ -211,6 +216,39 @@ parser.add_argument('--loss_fn', type=str, default='nll', choices=['nll', 'cox',
                     help='which loss function to use')
 parser.add_argument('--nll_alpha', type=float, default=0,
                     help='Balance between censored / uncensored loss')
+
+### Causal Separation args ###
+parser.add_argument('--use_causal_separation', action='store_true', default=False,
+                    help='Use causal separation trainer instead of standard trainer')
+parser.add_argument('--selection_method', type=str, default='gumbel',
+                    choices=['gumbel', 'topk', 'adaptive'],
+                    help='Prototype selection method for causal separation')
+parser.add_argument('--gumbel_tau', type=float, default=1.0,
+                    help='Temperature for Gumbel-Softmax')
+parser.add_argument('--gumbel_hard', type=bool, default=True,
+                    help='Use hard Gumbel-Softmax')
+parser.add_argument('--top_k_ratio', type=float, default=0.5,
+                    help='Ratio for top-k selection method')
+parser.add_argument('--lambda_causal_consistency', type=float, default=1.0,
+                    help='Weight for causal consistency loss')
+parser.add_argument('--lambda_confound_random', type=float, default=0.5,
+                    help='Weight for confounding randomness loss')
+parser.add_argument('--lambda_sparsity', type=float, default=0.01,
+                    help='Weight for selection sparsity loss')
+parser.add_argument('--lambda_balance', type=float, default=0.1,
+                    help='Weight for selection balance loss')
+parser.add_argument('--causal_consistency_mode', type=str, default='kl',
+                    choices=['kl', 'mse', 'cosine'],
+                    help='Mode for causal consistency loss')
+parser.add_argument('--confound_random_mode', type=str, default='entropy',
+                    choices=['entropy', 'uniform', 'variance'],
+                    help='Mode for confounding randomness loss')
+parser.add_argument('--target_selection_ratio', type=float, default=0.5,
+                    help='Target ratio for prototype selection balance')
+parser.add_argument('--path_proj_dim', type=int, default=256,
+                    help='Projection dimension for pathways')
+parser.add_argument('--mult', type=int, default=1,
+                    help='Multiplier for feedforward dimension')
 
 # experiment task / label args ###
 parser.add_argument('--exp_code', type=str, default=None,
