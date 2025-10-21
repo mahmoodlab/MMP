@@ -181,11 +181,12 @@ parser.add_argument('--model_histo_type', type=str, choices=['H2T', 'OT', 'PANTH
 parser.add_argument('--ot_eps', default=0.1, type=float,
                     help='Strength for entropic constraint regularization for OT')
 parser.add_argument('--model_histo_config', type=str,
-                    default='ABMIL_default', help="name of model config file")
+                    default='PANTHER_default', help="name of model config file")
 parser.add_argument('--n_fc_layers', type=int)
 parser.add_argument('--em_iter', type=int)
 parser.add_argument('--tau', type=float)
-parser.add_argument('--out_type', type=str, default='param_cat')
+parser.add_argument('--out_type', type=str, default='allcat',
+                    help="Output type for prototype models (allcat, weight_param_cat, weight_avg_all, weight_avg_mean)")
 
 # Multimodal args ###
 parser.add_argument('--num_coattn_layers', default=1, type=int)
