@@ -7,6 +7,9 @@ from mil_models import (PANTHERConfig, OTConfig, ProtoCountConfig, H2TConfig)
 from mil_models.model_multimodal import coattn, SurvPath, coattn_mot
 # , MCATPathways, CMTA
 
+# Import the new causal separation model
+from mil_models.model_causal_separation import CausalSeparationModel
+
 import pdb
 import torch
 from utils.file_utils import save_pkl, load_pkl
@@ -106,11 +109,30 @@ def create_multimodal_survival_model(args, omic_sizes=[]):
                             num_classes=num_classes,
                             num_coattn_layers=args.num_coattn_layers,
                             modality=args.model_mm_type,
-                            histo_agg=args.histo_agg,                       
+                            histo_agg=args.histo_agg,
                             histo_model=args.model_histo_type,
                             append_embed=args.append_embed,
                             net_indiv=args.net_indiv,
                             )
+
+    elif args.model_mm_type == 'causal_separation':
+        # New causal-confounding separation model
+        model = CausalSeparationModel(
+            omic_sizes=omic_sizes,
+            histo_in_dim=args.feat_dim,
+            path_proj_dim=getattr(args, 'path_proj_dim', 256),
+            num_classes=num_classes,
+            num_coattn_layers=args.num_coattn_layers,
+            histo_agg=args.histo_agg,
+            histo_model=args.model_histo_type,
+            append_embed=args.append_embed,
+            mult=getattr(args, 'mult', 1),
+            numOfproto=args.n_proto,
+            selection_method=getattr(args, 'selection_method', 'gumbel'),
+            tau=getattr(args, 'gumbel_tau', 1.0),
+            hard=getattr(args, 'gumbel_hard', True),
+            top_k_ratio=getattr(args, 'top_k_ratio', 0.5),
+        )
 
     return model
 
