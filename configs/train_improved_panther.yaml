@@ -1,0 +1,126 @@
+# 改进版 PANTHER 训练配置
+# Improved PANTHER Training Configuration
+
+# 实验名称
+experiment_name: "panther_e2e_trainable"
+
+# 模型配置
+model:
+  name: "PANTHER"
+
+  # 关键改进：启用端到端训练
+  fix_proto: false  # 原型可训练 (原来是 true)
+
+  # EM 算法配置
+  em_iter: 5  # 增加 EM 迭代次数 (原来是 3)
+  tau: 0.001  # EM 正则化强度
+
+  # 原型配置
+  out_size: 16  # 原型数量
+  load_proto: true
+  proto_path: "checkpoints/prototypes/proto_init.npy"
+
+  # 新增：原型学习配置
+  diversity_reg: 0.01  # 多样性正则化权重
+  use_gumbel: false  # 是否使用 Gumbel-Softmax (实验性)
+  gumbel_temp: 1.0  # Gumbel 温度
+  cov_type: "diag"  # 协方差类型: diag, spherical, full
+
+  # 特征维度
+  emb_dim: 1024
+
+  # 输出类型
+  out: "allcat"  # allcat, weight_param_cat, select_top_5, etc.
+
+# 训练配置
+training:
+  # 基础训练参数
+  epochs: 50
+  batch_size: 1  # WSI-level batch
+  num_workers: 4
+
+  # 优化器配置
+  optimizer:
+    type: "AdamW"
+    lr: 1e-4
+    weight_decay: 1e-5
+
+    # 新增：原型专用学习率 (可选)
+    proto_lr: 5e-5  # 原型学习率通常设置得更小
+    use_separate_proto_optimizer: true
+
+  # 学习率调度
+  lr_scheduler:
+    type: "CosineAnnealingLR"
+    T_max: 50
+    eta_min: 1e-6
+
+  # 损失函数权重
+  loss_weights:
+    survival_loss: 1.0  # 主任务损失
+    diversity_loss: 0.01  # 原型多样性损失
+
+  # 梯度裁剪
+  gradient_clip: 1.0
+
+  # 早停
+  early_stopping:
+    patience: 10
+    min_delta: 0.001
+
+# 数据配置
+data:
+  dataset: "TCGA-LUAD"
+  data_root: "data/TCGA-LUAD"
+
+  # 特征路径
+  feature_path: "features/resnet50_1024"
+
+  # 数据划分
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+
+  # 数据增强 (在特征级别)
+  augmentation:
+    enable: false
+
+# 验证配置
+validation:
+  interval: 1  # 每 N 个 epoch 验证一次
+  metrics:
+    - "c_index"
+    - "survival_loss"
+    - "prototype_usage"  # 新增：监控原型使用情况
+    - "prototype_diversity"  # 新增：监控原型多样性
+
+# 日志和检查点
+logging:
+  log_dir: "logs/panther_e2e"
+  tensorboard: true
+  wandb:
+    enable: false
+    project: "MMP"
+    entity: "your_entity"
+
+  # 检查点
+  checkpoint:
+    save_dir: "checkpoints/panther_e2e"
+    save_interval: 5  # 每 N 个 epoch 保存
+    save_best: true  # 保存最佳模型
+    metric: "c_index"  # 用于判断最佳模型的指标
+    mode: "max"  # max 或 min
+
+# 设备配置
+device:
+  cuda: true
+  gpu_ids: [0]
+  mixed_precision: true  # 使用混合精度训练
+
+# 可复现性
+seed: 42
+
+# 调试模式
+debug:
+  enable: false
+  max_samples: 100  # 调试时使用的最大样本数
